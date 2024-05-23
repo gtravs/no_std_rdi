@@ -52,12 +52,15 @@ pub struct UNICODE_STRING {
     pub MaximumLength: u16,
     pub Buffer: PWSTR,
 }
+
 impl ::core::marker::Copy for UNICODE_STRING {}
+
 impl ::core::clone::Clone for UNICODE_STRING {
     fn clone(&self) -> Self {
         *self
     }
 }
+
 #[repr(C)]
 pub struct LDR_DATA_TABLE_ENTRY {
     pub(crate) InLoadOrderLinks: LIST_ENTRY,
@@ -75,8 +78,6 @@ pub struct LDR_DATA_TABLE_ENTRY {
  */
 
 
-
-
 pub type __uint64 = u64;
 pub type ULONGLONG = __uint64;
 
@@ -84,7 +85,7 @@ pub type DWORD = c_ulong;
 pub type WORD = c_ushort;
 pub type LONG = c_long;
 pub type BYTE = c_uchar;
-#[link_section=".text$z"]
+#[link_section = ".text$z"]
 #[macro_export]
 macro_rules! STRUCT {
     (#[debug] $($rest:tt)*) => (
@@ -109,7 +110,7 @@ macro_rules! STRUCT {
     );
 }
 
-STRUCT!{struct IMAGE_DOS_HEADER {
+STRUCT! {struct IMAGE_DOS_HEADER {
     e_magic: WORD,
     e_cblp: WORD,
     e_cp: WORD,
@@ -141,20 +142,23 @@ macro_rules! DECLARE_HANDLE {
     };
 }
 
-DECLARE_HANDLE!{HINSTANCE, HINSTANCE__}
+DECLARE_HANDLE! {HINSTANCE, HINSTANCE__}
 pub type HMODULE = HINSTANCE;
 pub type CHAR = c_char;
 pub type LPCSTR = *const CHAR;
+
 pub enum __some_function {}
+
 /// Pointer to a function with unknown type signature.
 pub type FARPROC = *mut __some_function;
 pub type HANDLE = *mut c_void;
 pub type ULONG_PTR = usize;
 pub type SIZE_T = ULONG_PTR;
 pub type NTSTATUS = LONG;
-DECLARE_HANDLE!{HWND, HWND__}
+DECLARE_HANDLE! {HWND, HWND__}
 pub type UINT = c_uint;
 pub type INT = c_int;
+
 pub const IMAGE_DIRECTORY_ENTRY_IMPORT: WORD = 1;
 macro_rules! UNION {
     ($(#[$attrs:meta])* union $name:ident {
@@ -216,12 +220,12 @@ macro_rules! UNION {
 }
 
 #[cfg(target_pointer_width = "64")]
-IFDEF!{
+IFDEF! {
 pub type IMAGE_NT_HEADERS = IMAGE_NT_HEADERS64;
 pub type PIMAGE_NT_HEADERS = PIMAGE_NT_HEADERS64;
 }
 
-STRUCT!{struct IMAGE_NT_HEADERS64 {
+STRUCT! {struct IMAGE_NT_HEADERS64 {
     Signature: DWORD,
     FileHeader: IMAGE_FILE_HEADER,
     OptionalHeader: IMAGE_OPTIONAL_HEADER64,
@@ -236,12 +240,12 @@ pub const MEM_COMMIT: DWORD = 0x1000;
 pub const MEM_RESERVE: DWORD = 0x2000;
 
 
-UNION!{union IMAGE_SECTION_HEADER_Misc {
+UNION! {union IMAGE_SECTION_HEADER_Misc {
     [u32; 1],
     PhysicalAddress PhysicalAddress_mut: DWORD,
     VirtualSize VirtualSize_mut: DWORD,
 }}
-STRUCT!{struct IMAGE_SECTION_HEADER {
+STRUCT! {struct IMAGE_SECTION_HEADER {
     Name: [BYTE; IMAGE_SIZEOF_SHORT_NAME],
     Misc: IMAGE_SECTION_HEADER_Misc,
     VirtualAddress: DWORD,
@@ -254,23 +258,23 @@ STRUCT!{struct IMAGE_SECTION_HEADER {
     Characteristics: DWORD,
 }}
 
-UNION!{union IMAGE_THUNK_DATA64_u1 {
+UNION! {union IMAGE_THUNK_DATA64_u1 {
     [u64; 1],
     ForwarderString ForwarderString_mut: ULONGLONG,
     Function Function_mut: ULONGLONG,
     Ordinal Ordinal_mut: ULONGLONG,
     AddressOfData AddressOfData_mut: ULONGLONG,
 }}
-STRUCT!{struct IMAGE_THUNK_DATA64 {
+STRUCT! {struct IMAGE_THUNK_DATA64 {
     u1: IMAGE_THUNK_DATA64_u1,
 }}
 
-UNION!{union IMAGE_IMPORT_DESCRIPTOR_u {
+UNION! {union IMAGE_IMPORT_DESCRIPTOR_u {
     [u32; 1],
     Characteristics Characteristics_mut: DWORD,
     OriginalFirstThunk OriginalFirstThunk_mut: DWORD,
 }}
-STRUCT!{struct IMAGE_IMPORT_DESCRIPTOR {
+STRUCT! {struct IMAGE_IMPORT_DESCRIPTOR {
     u: IMAGE_IMPORT_DESCRIPTOR_u,
     TimeDateStamp: DWORD,
     ForwarderChain: DWORD,
@@ -278,12 +282,12 @@ STRUCT!{struct IMAGE_IMPORT_DESCRIPTOR {
     FirstThunk: DWORD,
 }}
 
-STRUCT!{struct IMAGE_IMPORT_BY_NAME {
+STRUCT! {struct IMAGE_IMPORT_BY_NAME {
     Hint: WORD,
     Name: [CHAR; 1],
 }}
 
-STRUCT!{struct IMAGE_BASE_RELOCATION {
+STRUCT! {struct IMAGE_BASE_RELOCATION {
     VirtualAddress: DWORD,
     SizeOfBlock: DWORD,
 }}
@@ -293,7 +297,7 @@ pub const IMAGE_REL_BASED_HIGHLOW: WORD = 3;
 pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: WORD = 5;
 pub const IMAGE_ORDINAL_FLAG64: ULONGLONG = 0x8000000000000000;
 pub const IMAGE_ORDINAL_FLAG32: DWORD = 0x80000000;
-STRUCT!{struct IMAGE_FILE_HEADER {
+STRUCT! {struct IMAGE_FILE_HEADER {
     Machine: WORD,
     NumberOfSections: WORD,
     TimeDateStamp: DWORD,
@@ -302,7 +306,7 @@ STRUCT!{struct IMAGE_FILE_HEADER {
     SizeOfOptionalHeader: WORD,
     Characteristics: WORD,
 }}
-STRUCT!{struct IMAGE_OPTIONAL_HEADER64 {
+STRUCT! {struct IMAGE_OPTIONAL_HEADER64 {
     Magic: WORD,
     MajorLinkerVersion: BYTE,
     MinorLinkerVersion: BYTE,
@@ -335,12 +339,12 @@ STRUCT!{struct IMAGE_OPTIONAL_HEADER64 {
     DataDirectory: [IMAGE_DATA_DIRECTORY; IMAGE_NUMBEROF_DIRECTORY_ENTRIES],
 }}
 pub const IMAGE_NUMBEROF_DIRECTORY_ENTRIES: usize = 16;
-STRUCT!{struct IMAGE_DATA_DIRECTORY {
+STRUCT! {struct IMAGE_DATA_DIRECTORY {
     VirtualAddress: DWORD,
     Size: DWORD,
 }}
 
-STRUCT!{struct IMAGE_EXPORT_DIRECTORY {
+STRUCT! {struct IMAGE_EXPORT_DIRECTORY {
     Characteristics: DWORD,
     TimeDateStamp: DWORD,
     MajorVersion: WORD,
@@ -354,6 +358,7 @@ STRUCT!{struct IMAGE_EXPORT_DIRECTORY {
     AddressOfNameOrdinals: DWORD,
 }}
 pub const IMAGE_DIRECTORY_ENTRY_EXPORT: WORD = 0;
+
 pub type PIMAGE_DATA_DIRECTORY = *mut IMAGE_DATA_DIRECTORY;
 
 
@@ -362,7 +367,7 @@ pub type PIMAGE_DATA_DIRECTORY = *mut IMAGE_DATA_DIRECTORY;
 */
 
 pub type LoadLibraryAFn = unsafe extern "system" fn(lpLibFileName: *const i8) -> *mut u8;
-pub type GetProcAddressFn = unsafe extern "system" fn(hModule: HMODULE,lpProcName: LPCSTR,) -> FARPROC;
+pub type GetProcAddressFn = unsafe extern "system" fn(hModule: HMODULE, lpProcName: LPCSTR) -> FARPROC;
 pub type NtAllocateVirtualMemoryFn = unsafe extern "system" fn(
     ProcessHandle: HANDLE,
     BaseAddress: *mut *mut core::ffi::c_void,
@@ -371,11 +376,11 @@ pub type NtAllocateVirtualMemoryFn = unsafe extern "system" fn(
     AllocationType: u32,
     Protect: u32,
 ) -> NTSTATUS;
-pub type   MessageBoxAFn  = unsafe  extern "system" fn(
-    hWnd: HWND, 
-    lpText: LPCSTR, 
-    lpCaption: LPCSTR, 
-    uType: UINT
+pub type MessageBoxAFn = unsafe extern "system" fn(
+    hWnd: HWND,
+    lpText: LPCSTR,
+    lpCaption: LPCSTR,
+    uType: UINT,
 ) -> INT;
 
 // 定义 VirtualProtect 函数类型
@@ -389,14 +394,13 @@ pub type VirtualProtectFn = unsafe extern "system" fn(
 // 定义内存保护常量
 pub const PAGE_READWRITE: u32 = 0x04;
 pub const PAGE_READONLY: u32 = 0x02;
+
 pub type VirtualAllocFn = unsafe extern "system" fn(
     lpAddress: *mut c_void,
     dwSize: usize,
     flAllocationType: u32,
     flProtect: u32,
 ) -> *mut c_void;
-
-
 
 
 // 定义所需的 WinHTTP 函数类型
@@ -463,6 +467,6 @@ pub const WINHTTP_NO_REFERER: *const u16 = null_mut();
 pub const WINHTTP_DEFAULT_ACCEPT_TYPES: *const *const u16 = null_mut();
 
 
-type BOOL =  i32;
+type BOOL = i32;
 pub type GetConsoleWindowFn = unsafe extern "system" fn() -> *mut c_void;
-pub type ShowWindowFn = unsafe extern "system"  fn(hWnd: *mut c_void, nCmdShow: c_int) -> BOOL;
+pub type ShowWindowFn = unsafe extern "system" fn(hWnd: *mut c_void, nCmdShow: c_int) -> BOOL;

