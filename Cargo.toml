@@ -1,0 +1,17 @@
+[package]
+name = "no_std_rdi"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+spin = "0.9.8"
+linked_list_allocator = "0.10.5"
+
+[profile.release]
+panic = "abort"          # 使用 abort 而不是 unwind 来处理 panic
+lto = true               # 启用 Link Time Optimization
+opt-level = "s"          # 优化生成的二进制文件大小
+debug = false            # 不包含调试信息
+codegen-units = 1        # 降低 codegen 单元数以提高优化效果
+strip = "symbols"        # 去除符号表以减小文件大小
+
